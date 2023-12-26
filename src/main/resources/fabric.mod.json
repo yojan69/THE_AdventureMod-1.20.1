@@ -1,0 +1,40 @@
+{
+	"schemaVersion": 1,
+	"id": "theadventuremod",
+	"version": "${version}",
+	"name": "TheAdventureMod",
+	"description": "This is THE Adventure Mod :o",
+	"authors": [
+		"yojan"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "MIT",
+	"icon": "assets/theadventuremod/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.rigo.theadventuremod.TheAdventureMod"
+		],
+		"client": [
+			"com.rigo.theadventuremod.TheAdventureModClient"
+		],
+		"fabric-datagen": [
+			"com.rigo.theadventuremod.TheAdventureModDataGenerator"
+		]
+	},
+	"mixins": [
+		"theadventuremod.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.14.25",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
