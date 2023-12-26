@@ -117,8 +117,8 @@ public class CombatLogic implements ClientTickEvents.EndTick
 
         // RESTART
 
-        elapsedTime = 0;
         percentageComplete = 0;
+        elapsedTime = 0;
         playerStartingPos = null;
         entity = null;
         entityPos = null;
