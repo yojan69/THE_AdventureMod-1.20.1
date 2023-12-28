@@ -18,35 +18,35 @@ import net.minecraft.util.math.Vec3d;
 
 public class CombatLogic implements ClientTickEvents.EndTick
 {
-    //////// Raycast and result
-    static MinecraftClient client = MinecraftClient.getInstance();
-    static EntityHitResult entityHit;
-    static Vec3d entityPos;
-    static Entity entity;
+    /// Raycast and result variables
+    MinecraftClient client = MinecraftClient.getInstance();
+    EntityHitResult entityHit;
+    Vec3d entityPos;
+    Entity entity;
 
-    /// Attacks
+    /// Attack variables
+    private int damage;
+    private KeyframeAnimation animation;
 
-    private static int damage;
-    private static KeyframeAnimation animation;
+    private enum AttackTypes{
+        kick, punch
+    }
 
-    //////// Move towards entity
-    static int timeToReachEntity = 15;
-    static Vec3d playerStartingPos;
-    static Vec3d lerpingPlayerPos;
+    /// Move towards entity variables
+    int timeToReachEntity = 15;
+    double elapsedTime = 0;
+    double percentageComplete = 0;
+    Vec3d playerStartingPos;
+    Vec3d lerpingPlayerPos;
+    private boolean canStartMovingEveryTick = false;
 
-    static double distanceToEntity;
-    static double elapsedTime = 0;
-    static double percentageComplete = 0;
-
-    private static boolean canStart = false;
-    private static boolean moveTowardsEntity = false;
-
-    private static void AssignVariables(){
+    private void AssignVariablesAndStartAttack(int damage, AttackTypes attackType){
         if (client.player != null){
-
             playerStartingPos = client.player.getPos();
 
             HitResult hit = client.crosshairTarget;
+
+            this.damage = damage;
 
             if(hit != null && hit.getType() == HitResult.Type.ENTITY)
             {
@@ -54,40 +54,49 @@ public class CombatLogic implements ClientTickEvents.EndTick
 
                 entity = entityHit.getEntity();
                 entityPos = entityHit.getEntity().getPos();
+                client.player.sendMessage(Text.literal(String.valueOf(playerStartingPos.distanceTo(entityPos))));
 
-                distanceToEntity = playerStartingPos.distanceTo(entityPos);
+                /// Assign Animation
 
-                canStart = true;
-            }
-            else{
-                canStart = false;
+                if (playerStartingPos.distanceTo(entityPos) < 1.25){
+                    animation = PlayerAnimationRegistry.getAnimation
+                            (new Identifier(TheAdventureMod.MOD_ID, "theadventuremod_"+attackType));
+                }
+                else{
+                    animation = PlayerAnimationRegistry.getAnimation
+                            (new Identifier(TheAdventureMod.MOD_ID, "theadventuremod_"+attackType+"_with_jump"));
+                }
+
+                StartAttack();
             }
         }
     }
 
-    private static void StartAttack(){
+    /// No reason for this method but just so it looks cooler or smth idk lol
+    private void StartAttack(){
         PerformLogic();
     }
 
-    private static void PerformLogic()
+    private void PerformLogic()
     {
-        canStart = false;
         AnimationsHandler.PlayAnimation(client.player, animation);
 
         ClientPlayNetworking.send(ModPackets.DISABLE_PLAYER_GRAVITY_AND_NO_CLIP, PacketByteBufs.create());
 
-        moveTowardsEntity = true;
+        canStartMovingEveryTick = true;
     }
 
-    /// MOVE PLAYER TOWARDS ENTITY
+    /// Move player towards entity every tick
 
     @Override
     public void onEndTick(MinecraftClient client)
     {
-        if (moveTowardsEntity)
+        if (canStartMovingEveryTick && client.player != null)
         {
+            /// Hard coded a bit the percentageComplete condition bc values over .8 of the lerp are so small that go unnoticed really
             if (client.player.getPos().distanceTo(entityPos) > 1.25 && percentageComplete != .8)
             {
+                /// Move the player
                     elapsedTime++;
                     percentageComplete = elapsedTime / timeToReachEntity;
                     lerpingPlayerPos = playerStartingPos.lerp(entityPos, percentageComplete);
@@ -96,22 +105,29 @@ public class CombatLogic implements ClientTickEvents.EndTick
             }
             else
             {
+                /// Send buf packet for server to do it's thing
                     PacketByteBuf buf = PacketByteBufs.create();
-                    buf.writeDouble(lerpingPlayerPos.x);
-                    buf.writeDouble(lerpingPlayerPos.y);
-                    buf.writeDouble(lerpingPlayerPos.z);
-                    buf.writeDouble(distanceToEntity);
-                    buf.writeInt(damage);
                     buf.writeUuid(entity.getUuid());
+                    if (lerpingPlayerPos != null){
+                        buf.writeDouble(lerpingPlayerPos.x);
+                        buf.writeDouble(lerpingPlayerPos.y);
+                        buf.writeDouble(lerpingPlayerPos.z);
+                    }
+                    else {
+                        buf.writeDouble(client.player.getPos().x);
+                        buf.writeDouble(client.player.getPos().y);
+                        buf.writeDouble(client.player.getPos().z);
+                    }
+                    buf.writeInt(damage);
 
-                    ClientPlayNetworking.send(ModPackets.SERVER_ATTACK_LOGIC, buf);
+                    ClientPlayNetworking.send(ModPackets.COMBAT_LOGIC, buf);
                     FinishAttack();
             }
         }
     }
 
-    private static void FinishAttack(){
-        moveTowardsEntity = false;
+    private void FinishAttack(){
+        canStartMovingEveryTick = false;
 
         ClientPlayNetworking.send(ModPackets.ENABLE_PLAYER_GRAVITY_AND_NO_CLIP, PacketByteBufs.create());
 
@@ -120,37 +136,16 @@ public class CombatLogic implements ClientTickEvents.EndTick
         percentageComplete = 0;
         elapsedTime = 0;
         playerStartingPos = null;
-        entity = null;
         entityPos = null;
         entityHit = null;
     }
 
-    public static void PerformKick(){
-        AssignVariables();
-
-        if(canStart){
-            damage = 2;
-            if (distanceToEntity < 1.5){
-                animation = PlayerAnimationRegistry.getAnimation
-                        (new Identifier(TheAdventureMod.MOD_ID, "theadventuremod_kick"));
-            }
-            else{
-                animation = PlayerAnimationRegistry.getAnimation
-                        (new Identifier(TheAdventureMod.MOD_ID, "theadventuremod_kick_with_jump"));
-            }
-
-            StartAttack();
-        }
+    public void PerformKick(){
+        int damage = 2;
+        AssignVariablesAndStartAttack(damage, AttackTypes.kick);
     }
-
-    public static void PerformPunch(){
-        AssignVariables();
-
-        if(canStart){
-            damage = 2;
-            animation = PlayerAnimationRegistry.getAnimation
-                    (new Identifier(TheAdventureMod.MOD_ID, "punch"));
-            StartAttack();
-        }
+    public void PerformPunch(){
+        int damage = 2;
+        AssignVariablesAndStartAttack(damage, AttackTypes.punch);
     }
 }

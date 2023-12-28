@@ -1,6 +1,6 @@
 package com.rigo.theadventuremod.combat;
 
-import com.rigo.theadventuremod.event.interfaces.IAnimatedPlayer;
+import com.rigo.theadventuremod.interfaces.IAnimatedPlayer;
 import dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer;
 import dev.kosmx.playerAnim.core.data.KeyframeAnimation;
 import net.minecraft.entity.player.PlayerEntity;

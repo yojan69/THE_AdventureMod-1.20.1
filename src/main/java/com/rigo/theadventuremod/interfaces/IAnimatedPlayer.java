@@ -1,4 +1,4 @@
-package com.rigo.theadventuremod.event.interfaces;
+package com.rigo.theadventuremod.interfaces;
 
 import dev.kosmx.playerAnim.api.layered.IAnimation;
 import dev.kosmx.playerAnim.api.layered.ModifierLayer;

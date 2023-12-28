@@ -18,18 +18,18 @@ public class KeyInputHandler
 
 
 
-    public static void registerKeyInputs(){
+    public static void registerKeyInputs(CombatLogic combatLogicInstance){
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (kickKey.wasPressed()){
-                CombatLogic.PerformKick();
+                combatLogicInstance.PerformKick();
             }
-/*if (punchKey.wasPressed()){
-                CombatLogic.StartAttack(new PunchAttack(2, AnimationsHandler.PunchAnimation()));
-            }*/
+            else if (punchKey.wasPressed()){
+                combatLogicInstance.PerformPunch();
+            }
         });
     }
 
-    public static void register(){
+    public static void register(CombatLogic combatLogicInstance){
         kickKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 KICK_ATTACK_KEY,
                 InputUtil.Type.MOUSE,
@@ -43,6 +43,6 @@ public class KeyInputHandler
                 KEY_CATEGORY_THEADVENTURE
         ));
 
-        registerKeyInputs();
+        registerKeyInputs(combatLogicInstance);
     }
 }

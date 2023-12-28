@@ -11,8 +11,10 @@ public class TheAdventureModClient implements ClientModInitializer
     @Override
     public void onInitializeClient()
     {
-        KeyInputHandler.register();
+        CombatLogic combatLogicInstance = new CombatLogic();
+
+        KeyInputHandler.register(combatLogicInstance);
         ModPackets.registerS2CPackets();
-        ClientTickEvents.END_CLIENT_TICK.register(new CombatLogic());
+        ClientTickEvents.END_CLIENT_TICK.register(combatLogicInstance);
     }
 }

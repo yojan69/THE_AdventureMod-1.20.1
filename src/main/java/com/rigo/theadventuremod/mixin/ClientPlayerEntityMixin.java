@@ -1,7 +1,7 @@
 package com.rigo.theadventuremod.mixin;
 
 import com.mojang.authlib.GameProfile;
-import com.rigo.theadventuremod.event.interfaces.IAnimatedPlayer;
+import com.rigo.theadventuremod.interfaces.IAnimatedPlayer;
 import dev.kosmx.playerAnim.api.layered.IAnimation;
 import dev.kosmx.playerAnim.api.layered.ModifierLayer;
 import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationAccess;
