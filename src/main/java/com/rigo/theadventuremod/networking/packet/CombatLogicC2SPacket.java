@@ -21,8 +21,8 @@ public class CombatLogicC2SPacket
 
         ServerWorld world = (ServerWorld) player.getWorld();
 
-        /* Getting the entity from the server world instead of the one the player
-           had gotten to avoid any sort of crash bc of a null entity or smth */
+        /* Getting the entity from the server world (server world means is the world, no idea why is there
+           a server and a client world */
 
         UUID entityUuid = buf.readUuid();
         Entity entity = world.getEntity(entityUuid);
@@ -35,10 +35,18 @@ public class CombatLogicC2SPacket
         player.teleport(lastPlayerPos.x, lastPlayerPos.y, lastPlayerPos.z);
 
         int damage = buf.readInt();
+        boolean attackWithoutKnockback = buf.readBoolean();
 
         if (entity != null){
-            if (player.getPos().distanceTo(entity.getPos()) < 1.5) {
+            /*Distance to entity quite farther away bc packet takes a bit to be sent, so the player might've moved
+            a lil bit*/
+            if (player.getPos().distanceTo(entity.getPos()) < 2.5) {
                 entity.damage(entity.getDamageSources().playerAttack(player), damage);
+
+                if (attackWithoutKnockback){
+                    player.sendMessage(Text.literal("attacked without knockback"));
+                    entity.setVelocity(0,0,0);
+                }
             }
         }
     }

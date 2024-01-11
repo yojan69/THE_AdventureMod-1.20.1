@@ -15,6 +15,10 @@ repositories {
 		name = "KosmX's maven"
 		url = 'https://maven.kosmx.dev/'
 	}
+	maven {
+		name = 'henkelmax.public'
+		url = 'https://maven.maxhenkel.de/repository/public'
+	}
 }
 
 loom {
@@ -50,6 +54,8 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	modImplementation("dev.kosmx.player-anim:player-animation-lib-fabric:1.0.2-rc1+1.20")
+
+	implementation 'de.maxhenkel.configbuilder:configbuilder:2.0.1'
 }
 
 processResources {

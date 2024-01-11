@@ -14,6 +14,5 @@ public class TheAdventureMod implements ModInitializer {
 	public void onInitialize()
 	{
 		ModPackets.registerC2SPackets();
-
 	}
 }
