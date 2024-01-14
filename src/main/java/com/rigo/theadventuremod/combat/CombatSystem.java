@@ -1,9 +1,7 @@
 package com.rigo.theadventuremod.combat;
 
-import com.rigo.theadventuremod.TheAdventureMod;
+import com.rigo.theadventuremod.combat.animation.AnimationsHandler;
 import com.rigo.theadventuremod.networking.ModPackets;
-import dev.kosmx.playerAnim.core.data.KeyframeAnimation;
-import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationRegistry;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
@@ -11,56 +9,56 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
 
-public class CombatLogic implements ClientTickEvents.EndTick
+public class CombatSystem implements ClientTickEvents.EndTick
 {
     /// Customizable variables
+    double maximumShortRangeDistance = 2;
+
     int timeToReachEntity = 10;
+
     int attackCooldown = 12;
 
-    /* The next variables are not meant to be modified */
+    int maxCombo = 3;
+
+    /* The next variables are not meant to be directly modified */
 
     /// Raycast and result variables
+
     MinecraftClient client = MinecraftClient.getInstance();
     EntityHitResult entityHit;
     Vec3d entityPos;
     Entity entity;
 
     /// Attack variables
+
     private int damage;
-    private KeyframeAnimation animation;
-    private int attackedEnemyCount = 0;
-    private boolean attackedSameEnemyLimitReached;
+    private int comboCount;
+    private boolean comboLimitReached;
 
     /// Move towards entity variables
-    double elapsedTime = 0;
-    double percentageComplete = 0;
+
     Vec3d playerStartingPos;
     Vec3d lerpingPlayerPos;
+    double elapsedTime;
+    double percentageComplete;
     private boolean startMovingEveryTick = false;
 
     /// Cooldown
+
     boolean canAttack = true;
     boolean startCooldown;
     int attackCooldownTimer;
-
-    /// Animations
-    Identifier kick = new Identifier(TheAdventureMod.MOD_ID, "theadventuremod_kick");
-    Identifier longKick = new Identifier(TheAdventureMod.MOD_ID, "theadventuremod_kick_with_jump");
-    Identifier punch = new Identifier(TheAdventureMod.MOD_ID, "theadventuremod_punch");
 
     public void PerformAttack(){
         if (canAttack){
             canAttack = false;
             int damage = 2;
-            AssignVariablesAndStartAttack(damage);
 
-            client.player.sendMessage(Text.literal(String.valueOf(attackedEnemyCount)));
+            AssignVariablesAndStartAttack(damage);
         }
     }
 
@@ -69,8 +67,8 @@ public class CombatLogic implements ClientTickEvents.EndTick
 
             playerStartingPos = client.player.getPos();
 
+            /// Make a raycast to the player's crosshair position
             HitResult hit = client.crosshairTarget;
-
 
             if(hit != null && hit.getType() == HitResult.Type.ENTITY)
             {
@@ -79,33 +77,21 @@ public class CombatLogic implements ClientTickEvents.EndTick
                 entityHit = (EntityHitResult) hit;
 
                 if (entity == entityHit.getEntity()){
-                    attackedEnemyCount++;
-
-                    if (attackedEnemyCount >= 3){
-                        client.player.sendMessage(Text.literal("turned 0"));
-                        client.player.sendMessage(Text.literal("UH?"));
-                        attackedEnemyCount = 0;
-                        attackedSameEnemyLimitReached = true;
-                    }
+                    CountCombo();
                 }
                 else {
                     entity = entityHit.getEntity();
-                    attackedEnemyCount++;
-
-                    if (attackedEnemyCount != 1){
-                        attackedEnemyCount = 1;
-                    }
+                    StartCombo();
                 }
 
                 entityPos = entityHit.getEntity().getPos();
 
                 /// Assign Damage
-
                 this.damage = damage;
 
-                /// Start attack according
+                /// Start attack according to the distance
 
-                if (playerStartingPos.distanceTo(entityPos) < 2.25){
+                if (playerStartingPos.distanceTo(entityPos) < maximumShortRangeDistance){
                     StartShortRangeAttack();
                 }
                 else{
@@ -113,6 +99,7 @@ public class CombatLogic implements ClientTickEvents.EndTick
                 }
             }
             else{
+
                 MissedAttack();
             }
         }
@@ -122,41 +109,37 @@ public class CombatLogic implements ClientTickEvents.EndTick
     /// No real reason for the SOMETHINGAttack methods but just to make the code look cleaner or smth idk lol
 
     private void MissedAttack(){
-        animation = PlayerAnimationRegistry.getAnimation(kick);
         PerformMissLogic();
     }
 
     private void StartShortRangeAttack(){
-        animation = PlayerAnimationRegistry.getAnimation(kick);
-
         PerformLogic(false);
     }
 
     private void StartLongRangeAttack(){
-        animation = PlayerAnimationRegistry.getAnimation(longKick);
-
         PerformLogic(true);
     }
 
     private void PerformLogic(boolean isLongRange)
     {
-        AnimationsHandler.PlayAnimation(client.player, animation);
-
         if (isLongRange){
+            AnimationsHandler.PlayRandomKickAnimation(client.player);
+
             ClientPlayNetworking.send(ModPackets.START_PLAYER_ATTACK_LOGIC, PacketByteBufs.create());
 
             startMovingEveryTick = true;
         }
         else{
-            PacketByteBuf buf = PacketByteBufs.create();
-            WriteAndSendBufPacket(buf, playerStartingPos, client.player, entity, damage, attackedSameEnemyLimitReached);
+            AnimationsHandler.PlayRandomPunchAnimation(client.player);
+
+            PacketByteBuf buf = WriteBufPacket(playerStartingPos, client.player, entity, damage, comboLimitReached);
             ClientPlayNetworking.send(ModPackets.COMBAT_LOGIC, buf);
             FinishAttack();
         }
     }
 
     private void PerformMissLogic(){
-        AnimationsHandler.PlayAnimation(client.player, animation);
+        AnimationsHandler.PlayRandomPunchAnimation(client.player);
 
         if (client.player != null) {
             client.player.setVelocity(0,client.player.getVelocity().y,0);
@@ -173,12 +156,12 @@ public class CombatLogic implements ClientTickEvents.EndTick
         if (client.player != null)
         {
             if (startMovingEveryTick){
-                /* Hard coded a bit the percentageComplete condition bc values over .8 of the lerp are so small
-                that go unnoticed really */
-                if (client.player.getPos().distanceTo(entityPos) > 1.5 && percentageComplete != .8)
+                if (client.player.getPos().distanceTo(entityPos) > 1.5)
                 {
                     elapsedTime++;
                     percentageComplete = elapsedTime / timeToReachEntity;
+
+                    /// Lerp the player starting position with the entity position by small increments
                     lerpingPlayerPos = playerStartingPos.lerp(entityPos, percentageComplete);
 
                     /// Move the player
@@ -186,22 +169,23 @@ public class CombatLogic implements ClientTickEvents.EndTick
                 }
                 else
                 {
-                    /// Send buf packet for server to do its thing
-                    PacketByteBuf buf = PacketByteBufs.create();
-                    WriteAndSendBufPacket(buf, lerpingPlayerPos, client.player, entity, damage, attackedSameEnemyLimitReached);
+                    /// Send buf packet for server to do some logic like damaging entity
 
+                    PacketByteBuf buf = WriteBufPacket(lerpingPlayerPos, client.player, entity, damage, comboLimitReached);
                     ClientPlayNetworking.send(ModPackets.COMBAT_LOGIC, buf);
                     FinishAttack();
                 }
             }
 
             if (startCooldown){
-                StartCooldownTimer();
+                StartCooldown();
             }
         }
     }
 
-    private void WriteAndSendBufPacket(PacketByteBuf buf, Vec3d pos, PlayerEntity player, Entity entity, int damage, boolean attackWithoutKnockback){
+    private PacketByteBuf WriteBufPacket(Vec3d pos, PlayerEntity player, Entity entity, int damage, boolean attackWithoutKnockback){
+        PacketByteBuf buf = PacketByteBufs.create();
+
         buf.writeUuid(entity.getUuid());
 
         if (pos != null){
@@ -217,6 +201,8 @@ public class CombatLogic implements ClientTickEvents.EndTick
 
         buf.writeInt(damage);
         buf.writeBoolean(attackWithoutKnockback);
+
+        return buf;
     }
 
     private void FinishAttack(){
@@ -224,7 +210,7 @@ public class CombatLogic implements ClientTickEvents.EndTick
 
         ClientPlayNetworking.send(ModPackets.STOP_PLAYER_ATTACK_LOGIC, PacketByteBufs.create());
 
-        // RESTART
+        /// Restart Everything
         startCooldown = true;
         percentageComplete = 0;
         elapsedTime = 0;
@@ -232,12 +218,12 @@ public class CombatLogic implements ClientTickEvents.EndTick
         entityPos = null;
         entityHit = null;
 
-        if (attackedSameEnemyLimitReached){
-            attackedSameEnemyLimitReached = false;
+        if (comboLimitReached){
+            RestartCombo();
         }
     }
 
-    private void StartCooldownTimer(){
+    private void StartCooldown(){
         attackCooldownTimer++;
 
         if (attackCooldownTimer >= attackCooldown){
@@ -250,5 +236,26 @@ public class CombatLogic implements ClientTickEvents.EndTick
         attackCooldownTimer = 0;
 
         canAttack = true;
+    }
+
+    private void StartCombo(){
+        comboCount++;
+
+        if (comboCount != 1){
+            comboCount = 1;
+        }
+    }
+
+    private void CountCombo(){
+        comboCount++;
+
+        if (comboCount >= maxCombo){
+            comboCount = 0;
+            comboLimitReached = true;
+        }
+    }
+
+    private void RestartCombo(){
+        comboLimitReached = false;
     }
 }

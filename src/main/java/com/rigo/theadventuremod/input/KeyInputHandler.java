@@ -1,6 +1,6 @@
 package com.rigo.theadventuremod.input;
 
-import com.rigo.theadventuremod.combat.CombatLogic;
+import com.rigo.theadventuremod.combat.CombatSystem;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
@@ -14,16 +14,16 @@ public class KeyInputHandler
 
     public static KeyBinding attackKey;
 
-    public static void registerKeyInputs(CombatLogic combatLogicInstance){
+    public static void registerKeyInputs(CombatSystem combatSystemInstance){
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
 
             if (attackKey.isPressed()){
-                combatLogicInstance.PerformAttack();
+                combatSystemInstance.PerformAttack();
             }
         });
 
     }
-    public static void register(CombatLogic combatLogicInstance){
+    public static void register(CombatSystem combatSystemInstance){
         attackKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 ATTACK_KEY,
                 InputUtil.Type.MOUSE,
@@ -31,6 +31,6 @@ public class KeyInputHandler
                 KEY_CATEGORY_THEADVENTURE
         ));
 
-        registerKeyInputs(combatLogicInstance);
+        registerKeyInputs(combatSystemInstance);
     }
 }

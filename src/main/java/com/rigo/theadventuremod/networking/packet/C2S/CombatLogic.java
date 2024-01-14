@@ -1,4 +1,4 @@
-package com.rigo.theadventuremod.networking.packet;
+package com.rigo.theadventuremod.networking.packet.C2S;
 
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.minecraft.entity.Entity;
@@ -7,13 +7,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.UUID;
 
 
-public class CombatLogicC2SPacket
+public class CombatLogic
 {
     public static void receive(MinecraftServer server, ServerPlayerEntity player, ServerPlayNetworkHandler handler,
                                PacketByteBuf buf, PacketSender responseSender){
@@ -44,7 +43,6 @@ public class CombatLogicC2SPacket
                 entity.damage(entity.getDamageSources().playerAttack(player), damage);
 
                 if (attackWithoutKnockback){
-                    player.sendMessage(Text.literal("attacked without knockback"));
                     entity.setVelocity(0,0,0);
                 }
             }

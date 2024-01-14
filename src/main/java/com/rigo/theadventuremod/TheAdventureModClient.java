@@ -1,25 +1,35 @@
 package com.rigo.theadventuremod;
 
+import com.rigo.theadventuremod.combat.animation.AnimationRegistry;
 import com.rigo.theadventuremod.input.KeyInputHandler;
-import com.rigo.theadventuremod.combat.CombatLogic;
+import com.rigo.theadventuremod.combat.CombatSystem;
 import com.rigo.theadventuremod.networking.ModPackets;
-import de.maxhenkel.configbuilder.ConfigBuilder;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.MinecraftClient;
 
-import java.nio.file.Paths;
 
 public class TheAdventureModClient implements ClientModInitializer
 {
-    public static CombatLogic COMBAT_LOGIC_INSTANCE;
-
+    public static CombatSystem COMBAT_SYSTEM_INSTANCE;
 
     @Override
-    public void onInitializeClient()
-    {
-        COMBAT_LOGIC_INSTANCE = new CombatLogic();
-        KeyInputHandler.register(COMBAT_LOGIC_INSTANCE);
+    public void onInitializeClient() {
+        COMBAT_SYSTEM_INSTANCE = new CombatSystem();
+        KeyInputHandler.register(COMBAT_SYSTEM_INSTANCE);
+        ClientTickEvents.END_CLIENT_TICK.register(COMBAT_SYSTEM_INSTANCE);
+
         ModPackets.registerS2CPackets();
-        ClientTickEvents.END_CLIENT_TICK.register(COMBAT_LOGIC_INSTANCE);
+
+        ClientLifecycleEvents.CLIENT_STARTED.register((client) -> {
+            AnimationRegistry.Load(MinecraftClient.getInstance().getResourceManager(),
+                    AnimationRegistry.punchAnimationsFolder,
+                    AnimationRegistry.punchAnimations);
+
+            AnimationRegistry.Load(MinecraftClient.getInstance().getResourceManager(),
+                    AnimationRegistry.kickAnimationsFolder,
+                    AnimationRegistry.kickAnimations);
+        });
     }
 }
